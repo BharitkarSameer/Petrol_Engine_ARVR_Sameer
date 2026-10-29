@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Petrol Engine Lab · Exploded 3D</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E⚙️%3C/text%3E%3C/svg%3E">
+<style>
+:root{box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+--bg:#eef3f8;--panel:#f8fbfe;--ink:#12263f;--mute:#4d6480;--line:#c4d3e4;--acc:#0b5cab;--hot:#c0392b;--grid:#d5e1ee}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#0c1b2e;--panel:#10243b;--ink:#e6eef8;--mute:#93a9c4;--line:#24405f;--acc:#6bb6ff;--hot:#ff8a73;--grid:#16304c}}
+:root[data-theme="dark"]{--bg:#0c1b2e;--panel:#10243b;--ink:#e6eef8;--mute:#93a9c4;--line:#24405f;--acc:#6bb6ff;--hot:#ff8a73;--grid:#16304c}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 "Segoe UI",system-ui,sans-serif}
+.app{display:grid;grid-template-columns:1fr 350px;height:100%}
+#stage{position:relative;overflow:hidden;touch-action:none;cursor:grab;
+background:linear-gradient(var(--grid) 1px,transparent 1px) 0 0/32px 32px,linear-gradient(90deg,var(--grid) 1px,transparent 1px) 0 0/32px 32px,var(--bg)}
+#stage.cam{background:#000}
+#stage canvas{position:absolute;inset:0;width:100%;height:100%}
+#vid{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;display:none}
+#stage.cam #vid{display:block}
+.b{position:absolute;left:0;top:0;width:24px;height:24px;margin:-12px 0 0 -12px;border-radius:50%;border:2px solid var(--acc);background:var(--panel);color:var(--ink);font:700 12px/1 inherit;padding:0;cursor:pointer;z-index:2}
+.b.on{background:var(--hot);color:#fff;border-color:var(--hot)}
+.hud{position:absolute;left:12px;bottom:12px;right:12px;z-index:3;pointer-events:none;font-size:13px;color:var(--mute)}
+aside{overflow:auto;background:var(--panel);border-left:2px solid var(--line);padding:14px 16px 24px}
+h1{font-size:20px;margin:0 0 2px}
+.sub{color:var(--mute);margin:0 0 12px;font-size:13px}
+.chips{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin:8px 0}
+.chip{border:1.5px solid var(--line);border-radius:4px;padding:6px 2px;text-align:center;font-size:12px}
+.chip.on{background:var(--acc);border-color:var(--acc);color:var(--bg);font-weight:700}
+#why{min-height:2.7em;margin:0 0 10px;font-size:13px;color:var(--mute)}
+label{display:flex;justify-content:space-between;font-size:13px;margin-top:10px}
+input[type=range]{width:100%;accent-color:var(--acc)}
+.row{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}
+button.t{flex:1;border:1.5px solid var(--acc);background:transparent;color:var(--acc);border-radius:4px;padding:8px 6px;font:600 13px inherit;cursor:pointer;min-width:90px}
+button.t:hover,button.t:focus-visible{background:var(--acc);color:var(--bg);outline:none}
+h2{font-size:14px;margin:16px 0 6px;border-bottom:1.5px solid var(--line);padding-bottom:4px}
+ol{list-style:none;margin:0;padding:0}
+li button{display:flex;gap:8px;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--line);color:var(--ink);padding:6px 2px;font:inherit;cursor:pointer}
+li button:hover,li button:focus-visible{background:var(--grid);outline:none}
+li b{flex:0 0 22px;color:var(--acc)}
+li.on button{background:var(--grid);font-weight:600}
+#info{background:var(--grid);border-left:4px solid var(--hot);padding:8px 10px;margin-top:8px;font-size:13px}
+.g{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px}
+.g input{width:100%;padding:5px;border:1.5px solid var(--line);border-radius:4px;background:var(--bg);color:var(--ink);font:inherit}
+.g span{font-size:11px;color:var(--mute)}
+.read{display:grid;grid-template-columns:1fr auto;gap:2px 8px;font-size:13px;margin-top:8px}
+.read b{text-align:right}
+.hot{color:var(--hot)}
+@media (max-width:820px){.app{grid-template-columns:1fr;grid-template-rows:56% 44%}aside{border-left:0;border-top:2px solid var(--line)}}
+</style>
+</head>
+<body>
+<div class="app">
+<div id="stage"><video id="vid" playsinline muted></video><div class="hud" id="hud">Drag to turn · scroll or pinch to zoom · tap a number for the part</div></div>
+<aside>
+<h1>Petrol engine, taken apart</h1>
+<p class="sub">Single-cylinder four-stroke · Theory of Machines Lab · COEP Tech</p>
+<div class="chips" id="chips"><div class="chip">Intake</div><div class="chip">Compression</div><div class="chip">Power</div><div class="chip">Exhaust</div></div>
+<p id="why"></p>
+<label>Explode <span id="eV">0%</span></label><input type="range" id="ex" min="0" max="100" value="0" aria-label="Explode">
+<label>Engine speed <span id="rV">3000 rpm</span></label><input type="range" id="rp" min="600" max="6000" step="100" value="3000" aria-label="Engine speed">
+<div class="hud" style="position:static;font-size:11px;margin-top:2px">Motion is shown at 1/60 of real speed so you can follow each stroke.</div>
+<div class="row"><button class="t" id="run">Pause</button><button class="t" id="step">Next stroke</button><button class="t" id="cam">Overlay on camera</button><button class="t" id="th">Light/dark</button></div>
+<h2>Parts</h2><ol id="list"></ol><div id="info">Pick a part to see what it does.</div>
+<h2>Engine numbers</h2>
+<div class="g"><div><span>Bore mm</span><input id="bo" type="number" value="65" min="10"></div><div><span>Stroke mm</span><input id="st" type="number" value="66" min="10"></div><div><span>Comp. ratio</span><input id="cr" type="number" value="9" min="2" step=".5"></div></div>
+<div class="read"><span>Swept volume Vs = π/4·d²·L</span><b id="vs"></b><span>Clearance volume Vc = Vs/(r−1)</span><b id="vc"></b><span>Otto efficiency 1 − 1/r^0.4</span><b id="ef"></b><span>Power strokes per second</span><b id="ps"></b></div>
+<p class="sub" style="margin-top:10px">Schematic model, not to scale. Replace the sample bore, stroke and ratio with your engine’s values.</p>
+</aside>
+</div>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+const T=THREE,V=(x,y,z)=>new T.Vector3(x,y,z),$=id=>document.getElementById(id);
+const R=.5,L=1.6,stage=$("stage");
+const rdr=new T.WebGLRenderer({antialias:true,alpha:true});rdr.setPixelRatio(Math.min(devicePixelRatio,2));stage.prepend(rdr.domElement);
+const scene=new T.Scene(),cam=new T.PerspectiveCamera(35,1,.1,100);
+scene.add(new T.AmbientLight(0xffffff,.75));
+let dl=new T.DirectionalLight(0xffffff,.9);dl.position.set(5,8,6);scene.add(dl);
+dl=new T.DirectionalLight(0xffffff,.3);dl.position.set(-6,2,-4);scene.add(dl);
+const P=[],meshes=[];let cur;
+function part(name,desc,base,off,anchor,free){const g=new T.Group();g.position.set(...base);cur={name,desc,g,base:V(...base),off:V(...off),ax:V(...(anchor||[0,0,0])),mats:[],free,live:V(...base)};P.push(cur);scene.add(g);return cur}
+function mk(p,geo,color,pos,o={}){const m=new T.MeshStandardMaterial({color,metalness:.4,roughness:.5,transparent:o.t!=null,opacity:o.t==null?1:o.t,side:T.DoubleSide});
+const me=new T.Mesh(geo,m);if(pos)me.position.set(...pos);if(o.rx)me.rotation.x=o.rx;if(o.rz)me.rotation.z=o.rz;
+me.add(new T.LineSegments(new T.EdgesGeometry(geo,30),new T.LineBasicMaterial({color:0x6f8fb5,transparent:true,opacity:.6})));
+(o.par||p.g).add(me);p.mats.push(m);me.userData.p=p;meshes.push(me);return me}
+const cyl=(r,h,s=32,open=false)=>new T.CylinderGeometry(r,r,h,s,1,open),box=(x,y,z)=>new T.BoxGeometry(x,y,z),H=Math.PI/2;
+
+let p=part("Sump (oil pan)","Holds the lubricating oil that the oil pump sends to the bearings and cylinder wall.",[0,-1.15,0],[0,-2.4,0],[0,0,.7]);
+mk(p,box(2,.5,1.4),0x4f6275);mk(p,cyl(.09,.14,12),0x2c3a47,[.6,-.3,0],{rz:0});
+p=part("Crankcase","Housing that carries the crankshaft bearings and supports the cylinder block.",[0,0,0],[0,-1.2,0],[.95,-.6,.7]);
+mk(p,box(2,1.8,1.4),0x8fa3b8,null,{t:.28});
+p=part("Crankshaft","Turns the piston’s up-and-down push, through the connecting rod, into rotation.",[0,0,0],[0,0,0],[-.9,0,0]);
+const crank=new T.Group();p.g.add(crank);p.rg=crank;
+mk(p,cyl(.17,2.6),0x9aa4ad,[.3,0,0],{rz:H,par:crank});mk(p,cyl(.14,.7),0xc9d1d8,[0,R,0],{rz:H,par:crank});
+[-.3,.3].forEach(x=>{mk(p,box(.14,.9,.3),0x9aa4ad,[x,.2,0],{par:crank});mk(p,cyl(.38,.14),0x7f8a94,[x,-.4,0],{rz:H,par:crank})});
+p=part("Flywheel","Heavy wheel that stores energy during the power stroke and carries the engine through the other three.",[1.6,0,0],[2.2,0,0],[0,.9,0]);
+const fw=new T.Group();p.g.add(fw);p.rg=fw;mk(p,cyl(.85,.22,40),0x6a7b8c,null,{rz:H,par:fw});mk(p,cyl(.25,.4),0x9aa4ad,null,{rz:H,par:fw});
+[0,2.1,4.2].forEach(a=>mk(p,box(.26,.18,.18),0xd0b020,[.12,.62*Math.cos(a),.62*Math.sin(a)],{par:fw}));
+const rod=part("Connecting rod","Links the piston to the crank pin and carries the push of the gas to the crankshaft.",[0,0,0],[0,0,0],[0,0,.12],true);
+rod.shaft=mk(rod,box(.16,1,.09),0xa7b0b8,[0,.5,0]);mk(rod,cyl(.2,.35),0x7f8a94,null,{rz:H});rod.small=mk(rod,cyl(.12,.3),0x7f8a94,[0,L,0],{rz:H});
+const pis=part("Piston and rings","Slides in the cylinder: draws in mixture, compresses it, then takes the push of combustion.",[0,2.1,0],[0,1.3,0],[0,.45,0],true);
+mk(pis,cyl(.6,.7,40),0xd8dde3,[0,.08,0]);mk(pis,cyl(.09,1.0),0x2c3a47,null,{rz:H});[.3,.2].forEach(y=>mk(pis,new T.TorusGeometry(.6,.03,8,40),0x555f69,[0,y,0],{rx:H}));
+const flame=new T.Mesh(new T.SphereGeometry(.5,20,14),new T.MeshBasicMaterial({color:0xff7a1a,transparent:true,opacity:.8}));flame.scale.y=.55;flame.position.y=.7;pis.g.add(flame);
+p=part("Cylinder block","The bore the piston slides in. Outer fins shed heat to the air.",[0,1.9,0],[0,.35,0],[.85,.9,0]);
+mk(p,cyl(.66,2,40,true),0x7f93a6,null,{t:.4});[-.8,-.4,0,.4,.8].forEach(y=>mk(p,cyl(.82,.06,40),0x7f93a6,[0,y,0]));
+p=part("Cylinder head","Closes the top of the cylinder and holds the valves, spark plug and ports.",[0,3.2,0],[0,1.6,0],[.78,0,0]);
+mk(p,cyl(.8,.6,40),0x6c7f92);
+const vl=part("Valves","Intake valve (blue) lets fresh mixture in; exhaust valve (red) lets burnt gas out. Springs close them.",[0,3.2,0],[0,2.3,0],[.3,.75,0]);
+vl.v=[[-.3,0x3e8fd0],[.3,0xc4623a]].map(([x,c])=>{const g=new T.Group();g.position.x=x;vl.g.add(g);mk(vl,cyl(.035,1),c,[0,.2,0],{par:g});mk(vl,cyl(.16,.04),c,[0,-.3,0],{par:g});mk(vl,cyl(.09,.3,12),0xd0b020,[0,.45,0],{par:g,t:.7});return g});
+const cv=part("Valve cover and camshaft","The cam turns at half crankshaft speed and pushes each valve open once every two turns.",[0,3.7,0],[0,3,0],[.7,0,.4]);
+mk(cv,box(1.4,.4,.8),0xb0b8c0,null,{t:.3});const cm=new T.Group();cv.g.add(cm);cv.rg=cm;mk(cv,cyl(.07,1.2),0xd8dde3,null,{rz:H,par:cm});[-.3,.3].forEach(x=>mk(cv,cyl(.14,.1),0xd8dde3,[x,.07,0],{rz:H,par:cm}));
+const sp=part("Spark plug","Sparks near the end of compression to ignite the air-fuel mixture.",[0,3.85,.45],[0,2.5,0],[0,.45,0]);
+mk(sp,cyl(.08,.4,12),0x8a949e,[0,-.15,0]);mk(sp,cyl(.15,.12,6),0x8a949e,[0,.1,0]);mk(sp,cyl(.1,.35,16),0xf4f4f0,[0,.3,0]);
+const spark=new T.Mesh(new T.SphereGeometry(.1,10,8),new T.MeshBasicMaterial({color:0xffee55}));spark.position.y=-.38;sp.g.add(spark);
+p=part("Intake manifold","Carries the air-fuel mixture from the carburettor or injector to the intake valve.",[0,3.1,-1.1],[0,1.6,-1.4],[0,.3,-.4]);
+mk(p,cyl(.22,1,20),0x3e8fd0,null,{rx:H});mk(p,box(.7,.7,.1),0x3e8fd0,[0,0,.5]);
+p=part("Exhaust manifold","Carries burnt gas away to the silencer.",[0,3.1,1.1],[0,1.6,1.4],[0,.3,.4]);
+mk(p,cyl(.22,1,20),0xc4623a,null,{rx:H});mk(p,box(.7,.7,.1),0xc4623a,[0,0,-.5]);
+
+const info=[];let sel=null;
+P.forEach((q,i)=>{const b=document.createElement("button");b.className="b";b.textContent=i+1;b.setAttribute("aria-label",q.name);b.onclick=e=>{e.stopPropagation();pick(q)};stage.appendChild(b);q.badge=b;
+const li=document.createElement("li");li.innerHTML="<button><b>"+(i+1)+"</b><span>"+q.name+"</span></button>";li.firstChild.onclick=()=>pick(q);$("list").appendChild(li);q.li=li});
+function pick(q){sel=sel===q?null:q;P.forEach(z=>{const on=z===sel;z.badge.classList.toggle("on",on);z.li.classList.toggle("on",on);z.mats.forEach(m=>{m.emissive&&m.emissive.setHex(on?0xff9a00:0);m.emissiveIntensity=on?.55:0})});
+$("info").innerHTML=sel?"<b>"+(P.indexOf(sel)+1)+" · "+sel.name+"</b><br>"+sel.desc:"Pick a part to see what it does."}
+
+let th=0,run=!matchMedia("(prefers-reduced-motion:reduce)").matches,e=0,yaw=.7,pit=.22,zoom=1,last=0,lastSt=-1;
+const why=["Piston moves down, intake valve open: fresh air-fuel mixture is drawn in.","Both valves shut, piston moves up: the mixture is squeezed to a small volume.","Spark fires near the top. Burning gas pushes the piston down: the only stroke that does work.","Exhaust valve open, piston moves up: burnt gas is pushed out."];
+const chips=[...$("chips").children];
+function frame(t){requestAnimationFrame(frame);const dt=Math.min((t-last)/1000,.1);last=t;
+if(run)th+=$("rp").value/60*360/60*dt;
+e+=($("ex").value/100-e)*Math.min(1,dt*6);
+const a=th*Math.PI/180,ph=((th%720)+720)%720;
+P.forEach(q=>{if(!q.free){q.g.position.copy(q.base).addScaledVector(q.off,e);q.live.copy(q.g.position)}});
+P[2].rg.rotation.x=a;P[3].rg.rotation.x=a;cv.rg.rotation.x=a/2;
+const yp=R*Math.cos(a)+Math.sqrt(L*L-(R*Math.sin(a))**2);
+pis.g.position.set(0,yp+pis.off.y*e,0);pis.live.copy(pis.g.position);
+const Pp=V(0,R*Math.cos(a),R*Math.sin(a)),d=V(0,pis.g.position.y,0).sub(Pp),len=d.length();
+rod.g.position.copy(Pp);rod.g.quaternion.setFromUnitVectors(V(0,1,0),d.normalize());
+rod.shaft.scale.y=len;rod.shaft.position.y=len/2;rod.small.position.y=len;rod.live.copy(Pp).addScaledVector(d,len/2);
+vl.v[0].position.y=ph<180?-Math.sin(ph/180*Math.PI)*.15:0;vl.v[1].position.y=ph>=540?-Math.sin((ph-540)/180*Math.PI)*.15:0;
+flame.visible=ph>=360&&ph<540;flame.material.opacity=.85*(1-(ph-360)/180);spark.visible=ph>=350&&ph<385;
+const s=Math.floor(ph/180);if(s!==lastSt){lastSt=s;chips.forEach((c,i)=>c.classList.toggle("on",i===s));$("why").textContent=why[s]}
+const tg=V(0,1.4+1.5*e,0),dist=(11+5*e)*zoom;
+cam.position.set(tg.x+dist*Math.sin(yaw)*Math.cos(pit),tg.y+dist*Math.sin(pit),tg.z+dist*Math.cos(yaw)*Math.cos(pit));cam.lookAt(tg);
+const w=stage.clientWidth,h=stage.clientHeight;
+P.forEach(q=>{const v=q.live.clone().add(q.ax).project(cam);q.badge.style.transform="translate("+((v.x+1)/2*w)+"px,"+((1-v.y)/2*h)+"px)"});
+rdr.render(scene,cam)}
+function size(){const w=stage.clientWidth,h=stage.clientHeight;rdr.setSize(w,h);cam.aspect=w/h;cam.updateProjectionMatrix()}
+new ResizeObserver(size).observe(stage);size();requestAnimationFrame(frame);
+
+let dn=null,moved=0;const cv2=rdr.domElement,pts=new Map();let pd=0;
+cv2.addEventListener("pointerdown",ev=>{cv2.setPointerCapture(ev.pointerId);pts.set(ev.pointerId,[ev.clientX,ev.clientY]);dn=[ev.clientX,ev.clientY];moved=0;pd=0});
+cv2.addEventListener("pointermove",ev=>{if(!pts.has(ev.pointerId))return;const o=pts.get(ev.pointerId);
+if(pts.size===2){const k=[...pts.keys()],q=pts.get(k[0]===ev.pointerId?k[1]:k[0]);const n=Math.hypot(ev.clientX-q[0],ev.clientY-q[1]);if(pd)zoom=Math.min(2.2,Math.max(.4,zoom*pd/n));pd=n}
+else{yaw-=(ev.clientX-o[0])*.008;pit=Math.max(-.2,Math.min(1.3,pit+(ev.clientY-o[1])*.006))}
+moved+=Math.abs(ev.clientX-o[0])+Math.abs(ev.clientY-o[1]);pts.set(ev.pointerId,[ev.clientX,ev.clientY])});
+cv2.addEventListener("pointerup",ev=>{pts.delete(ev.pointerId);pd=0;if(moved<6&&dn){const r=cv2.getBoundingClientRect(),rc=new T.Raycaster();rc.setFromCamera({x:(ev.clientX-r.left)/r.width*2-1,y:-((ev.clientY-r.top)/r.height)*2+1},cam);const h=rc.intersectObjects(meshes,false)[0];if(h)pick(h.object.userData.p)}dn=null});
+cv2.addEventListener("pointercancel",ev=>pts.delete(ev.pointerId));
+cv2.addEventListener("wheel",ev=>{ev.preventDefault();zoom=Math.min(2.2,Math.max(.4,zoom*(1+ev.deltaY*.001)))},{passive:false});
+
+$("ex").oninput=()=>$("eV").textContent=$("ex").value+"%";
+$("rp").oninput=()=>{$("rV").textContent=$("rp").value+" rpm";calc()};
+$("run").onclick=()=>{run=!run;$("run").textContent=run?"Pause":"Play"};
+$("step").onclick=()=>{th=(Math.floor(th/180)+1)*180;run=false;$("run").textContent="Play"};
+$("th").onclick=()=>{const r=document.documentElement,d=r.dataset.theme?r.dataset.theme==="dark":matchMedia("(prefers-color-scheme:dark)").matches;r.dataset.theme=d?"light":"dark"};
+let stream=null;
+$("cam").onclick=async()=>{if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;stage.classList.remove("cam");$("cam").textContent="Overlay on camera";return}
+try{stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:"environment"}});$("vid").srcObject=stream;await $("vid").play();stage.classList.add("cam");$("cam").textContent="Stop camera"}
+catch(x){$("hud").textContent="Camera not available here. Open this page directly in your phone browser and allow camera access."}};
+if(location.hash==="#ar"){$("cam").style.outline="3px solid var(--hot)";$("hud").textContent="Tap Overlay on camera, allow the camera, then drag to turn the engine."}
+function calc(){const d=+$("bo").value,s=+$("st").value,r=+$("cr").value;if(!(d>0&&s>0&&r>1))return;const vs=Math.PI/4*d*d*s/1000;
+$("vs").textContent=vs.toFixed(0)+" cc";$("vc").textContent=(vs/(r-1)).toFixed(1)+" cc";$("ef").textContent=((1-Math.pow(r,-.4))*100).toFixed(1)+" %";$("ps").textContent=($("rp").value/120).toFixed(1)+" per s"}
+["bo","st","cr"].forEach(i=>$(i).oninput=calc);calc();
+</script>
+</body>
+</html>
